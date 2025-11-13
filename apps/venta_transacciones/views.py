@@ -133,9 +133,10 @@ class VentaViewSet(viewsets.ModelViewSet):
             ]
 
             return Response(data_formateada, status=status.HTTP_200_OK)
-
         except Exception as e:
             return Response({'error': f'Error al generar tendencias: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # NOTE: top-productos endpoint removed per user request (reverted changes)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -283,34 +284,28 @@ class CarritoViewSet(viewsets.ModelViewSet):
         )
     
     @action(detail=False, methods=['post'])
-    @transaction.atomic # Añadido para seguridad
+    @transaction.atomic
     def crear_venta_desde_carrito(self, request):
         """Crea una venta a partir del carrito actual del usuario"""
         user = request.user
-        
+
         if not hasattr(user, 'cliente'):
             return Response(
                 {'detail': 'El usuario no tiene un perfil de cliente asociado.'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Obtener el carrito del cliente
         carrito = Carrito.objects.filter(cliente=user.cliente).first()
         
         if not carrito:
-            return Response(
-                {'detail': 'No hay carrito disponible'}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "No hay carrito disponible"}, status=status.HTTP_404_NOT_FOUND)
         
         # Verificar que el carrito tenga productos
         detalles_carrito = DetalleCarrito.objects.filter(carrito=carrito)
         
         if not detalles_carrito.exists():
-            return Response(
-                {'detail': 'El carrito está vacío'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"detail": "El carrito está vacío"}, status=status.HTTP_400_BAD_REQUEST)
         
         # Calcular el total desde los detalles del carrito
         total_calculado = sum(detalle.subtotal for detalle in detalles_carrito)
