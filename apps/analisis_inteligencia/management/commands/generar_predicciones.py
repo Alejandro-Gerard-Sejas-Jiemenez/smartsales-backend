@@ -25,8 +25,8 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'No se pudo entrenar el modelo para {cat.nombre}. Saltando.'))
                 continue
 
-            # 2. Predecir los próximos 90 días
-            df_predicciones = predict_future_for_category(cat.id, dias_a_predecir=90)
+            # 2. Predecir los próximos 360 días
+            df_predicciones = predict_future_for_category(cat.id, dias_a_predecir=360)
             
             if df_predicciones is None:
                 self.stdout.write(self.style.ERROR(f'Falló la predicción para {cat.nombre}.'))

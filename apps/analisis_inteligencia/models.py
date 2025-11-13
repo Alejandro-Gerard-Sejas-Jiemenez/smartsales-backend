@@ -1,5 +1,5 @@
 from django.db import models
-from apps.catalogo.models import Categoria # Importamos el modelo Categoria
+from apps.catalogo.models import Categoria 
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
@@ -7,9 +7,8 @@ from decimal import Decimal
 class PrediccionVentas(models.Model):
     """
     Este modelo almacena los resultados de las predicciones de ventas (CU-16)
-    basado en el script SQL del proyecto .
+    basado en el script SQL del proyecto.
     """
-    # Usamos AutoField en lugar de Serial para que sea más simple
     id = models.AutoField(primary_key=True) 
     
     # La fecha en que se corrió la predicción
@@ -40,7 +39,6 @@ class PrediccionVentas(models.Model):
         ordering = ['-fecha_prediccion', 'categoria', 'periodo_inicio']
         verbose_name = "Predicción de Venta"
         verbose_name_plural = "Predicciones de Ventas"
-        # No usamos 'managed = False' porque queremos que Django cree esta tabla.
 
     def __str__(self):
         return f"Predicción para {self.categoria.nombre} ({self.periodo_inicio} a {self.periodo_fin})"
