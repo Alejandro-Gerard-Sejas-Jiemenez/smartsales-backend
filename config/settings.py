@@ -243,10 +243,49 @@ try:
         print("✅ Firebase Admin inicializado correctamente.")
 except Exception as e:
     print("⚠️ Error al inicializar Firebase Admin:", e)
-# DIAGNÓSTICO TEMPORAL - eliminar después
-print("=== DIAGNÓSTICO SETTINGS ===")
-print("DEBUG:", DEBUG)
-print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
-print("DATABASES:", DATABASES['default']['NAME'])
-print("SECRET_KEY exists:", bool(SECRET_KEY))
-print("=== FIN DIAGNÓSTICO ===")
+# En settings.py - LOGGING DETALLADO
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
+
+# DIAGNÓSTICO DE INICIALIZACIÓN
+print("🟢 === INICIALIZACIÓN RENDER ===")
+print("🟢 DEBUG:", DEBUG)
+print("🟢 DATABASE:", DATABASES['default']['NAME'])
+print("🟢 ALLOWED_HOSTS:", ALLOWED_HOSTS)
+
+try:
+    from rest_framework_simplejwt.tokens import RefreshToken
+    print("🟢 Simple JWT: ✅")
+except Exception as e:
+    print("🔴 Simple JWT: ❌", str(e))
+    import traceback
+    traceback.print_exc()
+
+print("🟢 === FIN INICIALIZACIÓN ===")
