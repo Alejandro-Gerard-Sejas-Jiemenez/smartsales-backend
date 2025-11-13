@@ -90,12 +90,26 @@ class LoginJWTView(APIView):
             print("🔴 Autenticación fallida")
             # Incrementar intentos fallidos
             usuario.incrementar_intentos_fallidos()
-            registrar_bitacora(
-                usuario,
-                "LOGIN_FALLIDO",
-                f'Intento de login fallido desde {request.META.get("REMOTE_ADDR", "IP desconocida")}',
-                request,
-            )
+            def registrar_bitacora(usuario, accion, descripcion="", request=None):
+                ip = None
+                if request:
+                    # Obtener IP del cliente
+                    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+                    if x_forwarded_for:
+                        ip = x_forwarded_for.split(',')[0].strip()
+                    else:
+                        ip = request.META.get('REMOTE_ADDR')
+                
+                # Limitar longitud de descripción si es muy larga
+                if descripcion and len(descripcion) > 500:
+                    descripcion = descripcion[:500] + "..."
+                
+                Bitacora.objects.create(
+                    usuario=usuario, 
+                    accion=accion, 
+                    descripcion=descripcion, 
+                    ip=ip
+                )
 
             if usuario.intentos_fallidos >= 3:
                 return Response(
