@@ -16,8 +16,6 @@ from decouple import config
 import os
 import cloudinary
 
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -28,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
 
-SECRET_KEY=config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = [
@@ -70,17 +68,13 @@ AUTH_USER_MODEL = 'acceso_seguridad.Usuario'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # Allow session auth for the browsable API / admin-authenticated users (useful in dev)
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',  # Temporal para testing
+        'rest_framework.permissions.AllowAny',  
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-        'rest_framework.parsers.FormParser',
-        'rest_framework.parsers.MultiPartParser',
-    ],
-    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
 }
 
 # CORS (simple dev)
@@ -233,94 +227,26 @@ STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 
 # ============================================================
 # CONFIGURACIÓN FIREBASE ADMIN SDK
-# - Soporta leer las credenciales desde la variable de entorno
-#   FIREBASE_CREDENTIALS (JSON multiline) o FIREBASE_CREDENTIALS_BASE64 (base64).
-# - Si no existe ninguna, mantiene la compatibilidad con
-#   firebase/smartsales365-firebase.json local.
-# - No lanza excepción en import de settings para evitar crash en boot.
 # ============================================================
 
-import json
-import base64
 import firebase_admin
 from firebase_admin import credentials
 
 try:
-    # Ruta al archivo JSON dentro de /firebase/
-    firebase_dir = BASE_DIR / "firebase"
-    cred_path = firebase_dir / "smartsales365-firebase.json"
+    # Ruta segura al archivo JSON dentro de /firebase/
+    cred_path = BASE_DIR / "firebase" / "smartsales365-firebase.json"
 
-    # Intenta leer la variable de entorno JSON (multilínea preferida)
-    firebase_json = os.environ.get('FIREBASE_CREDENTIALS')
-    firebase_b64 = os.environ.get('FIREBASE_CREDENTIALS_BASE64')
-
-    if firebase_json:
-        # Asegura carpeta
-        firebase_dir.mkdir(parents=True, exist_ok=True)
-        # Intenta parsear para validar
-        try:
-            json.loads(firebase_json)
-            # Escribe en el archivo (UTF-8)
-            with open(cred_path, 'w', encoding='utf-8') as f:
-                f.write(firebase_json)
-        except Exception:
-            # Si no es JSON válido, no sobreescribimos
-            print('⚠️ FIREBASE_CREDENTIALS presente pero no es JSON válido; se ignora.')
-    elif firebase_b64:
-        try:
-            decoded = base64.b64decode(firebase_b64)
-            text = decoded.decode('utf-8')
-            json.loads(text)  # valida
-            firebase_dir.mkdir(parents=True, exist_ok=True)
-            with open(cred_path, 'w', encoding='utf-8') as f:
-                f.write(text)
-        except Exception:
-            print('⚠️ FIREBASE_CREDENTIALS_BASE64 presente pero inválida; se ignora.')
-
-    # Inicializa sólo si hay un archivo válido disponible y no está ya inicializado
-    if cred_path.exists() and not firebase_admin._apps:
-        cred = credentials.Certificate(str(cred_path))
+    # Solo inicializar si no está ya inicializado
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin inicializado correctamente desde:", str(cred_path))
-    else:
-        if not cred_path.exists():
-            print('⚠️ No se encontró credencial de Firebase en entorno ni archivo local; saltando inicialización de firebase_admin.')
+        print("✅ Firebase Admin inicializado correctamente.")
 except Exception as e:
-    # Nunca fallar la importación de settings; solo informar
-    print("⚠️ Error al inicializar Firebase Admin (no crítico):", e)
-
-
-
-
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': False,
-    'UPDATE_LAST_LOGIN': False,
-
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    'AUDIENCE': None,
-    'ISSUER': None,
-    'JWK_URL': None,
-    'LEEWAY': 0,
-
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
-    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
-
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',
-    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
-
-    'JTI_CLAIM': 'jti',
-
-    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
-    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
-}
+    print("⚠️ Error al inicializar Firebase Admin:", e)
+# DIAGNÓSTICO TEMPORAL - eliminar después
+print("=== DIAGNÓSTICO SETTINGS ===")
+print("DEBUG:", DEBUG)
+print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
+print("DATABASES:", DATABASES['default']['NAME'])
+print("SECRET_KEY exists:", bool(SECRET_KEY))
+print("=== FIN DIAGNÓSTICO ===")
