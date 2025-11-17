@@ -17,7 +17,7 @@ from .serializers import (
 # === VIEWSET DE CLIENTE) ===
 class ClienteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminRole]
-    queryset = Usuario.objects.filter(rol='CLIENTE').select_related('cliente').order_by('nombre')
+    queryset = Usuario.objects.filter(rol='CLIENTE', cliente__isnull=False).select_related('cliente').order_by('nombre')
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre', 'apellido', 'correo', 'cliente__ciudad']
 

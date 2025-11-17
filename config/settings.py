@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
 
-SECRET_KEY=config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = [
@@ -227,58 +227,65 @@ STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 
 # ============================================================
 # CONFIGURACIÓN FIREBASE ADMIN SDK
-# - Soporta leer las credenciales desde la variable de entorno
-#   FIREBASE_CREDENTIALS (JSON multiline) o FIREBASE_CREDENTIALS_BASE64 (base64).
-# - Si no existe ninguna, mantiene la compatibilidad con
-#   firebase/smartsales365-firebase.json local.
-# - No lanza excepción en import de settings para evitar crash en boot.
 # ============================================================
 
-import json
-import base64
 import firebase_admin
 from firebase_admin import credentials
 
 try:
-    # Ruta al archivo JSON dentro de /firebase/
-    firebase_dir = BASE_DIR / "firebase"
-    cred_path = firebase_dir / "smartsales365-firebase.json"
+    # Ruta segura al archivo JSON dentro de /firebase/
+    cred_path = BASE_DIR / "firebase" / "smartsales365-firebase.json"
 
-    # Intenta leer la variable de entorno JSON (multilínea preferida)
-    firebase_json = os.environ.get('FIREBASE_CREDENTIALS')
-    firebase_b64 = os.environ.get('FIREBASE_CREDENTIALS_BASE64')
-
-    if firebase_json:
-        # Asegura carpeta
-        firebase_dir.mkdir(parents=True, exist_ok=True)
-        # Intenta parsear para validar
-        try:
-            json.loads(firebase_json)
-            # Escribe en el archivo (UTF-8)
-            with open(cred_path, 'w', encoding='utf-8') as f:
-                f.write(firebase_json)
-        except Exception:
-            # Si no es JSON válido, no sobreescribimos
-            print('⚠️ FIREBASE_CREDENTIALS presente pero no es JSON válido; se ignora.')
-    elif firebase_b64:
-        try:
-            decoded = base64.b64decode(firebase_b64)
-            text = decoded.decode('utf-8')
-            json.loads(text)  # valida
-            firebase_dir.mkdir(parents=True, exist_ok=True)
-            with open(cred_path, 'w', encoding='utf-8') as f:
-                f.write(text)
-        except Exception:
-            print('⚠️ FIREBASE_CREDENTIALS_BASE64 presente pero inválida; se ignora.')
-
-    # Inicializa sólo si hay un archivo válido disponible y no está ya inicializado
-    if cred_path.exists() and not firebase_admin._apps:
-        cred = credentials.Certificate(str(cred_path))
+    # Solo inicializar si no está ya inicializado
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin inicializado correctamente desde:", str(cred_path))
-    else:
-        if not cred_path.exists():
-            print('⚠️ No se encontró credencial de Firebase en entorno ni archivo local; saltando inicialización de firebase_admin.')
+        print("✅ Firebase Admin inicializado correctamente.")
 except Exception as e:
-    # Nunca fallar la importación de settings; solo informar
-    print("⚠️ Error al inicializar Firebase Admin (no crítico):", e)
+    print("⚠️ Error al inicializar Firebase Admin:", e)
+# En settings.py - LOGGING DETALLADO
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
+
+# DIAGNÓSTICO DE INICIALIZACIÓN
+print("🟢 === INICIALIZACIÓN RENDER ===")
+print("🟢 DEBUG:", DEBUG)
+print("🟢 DATABASE:", DATABASES['default']['NAME'])
+print("🟢 ALLOWED_HOSTS:", ALLOWED_HOSTS)
+
+try:
+    from rest_framework_simplejwt.tokens import RefreshToken
+    print("🟢 Simple JWT: ✅")
+except Exception as e:
+    print("🔴 Simple JWT: ❌", str(e))
+    import traceback
+    traceback.print_exc()
+
+print("🟢 === FIN INICIALIZACIÓN ===")

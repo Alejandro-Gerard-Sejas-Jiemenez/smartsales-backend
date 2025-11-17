@@ -38,15 +38,23 @@ class LoginJWTView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        print("🟢 === LOGINJWTVIEW INICIADA ===")
+        print("🟢 Request data:", request.data)
+        
         correo = request.data.get("correo")
         password = request.data.get("password")
+        
+        print(f"🟢 Credenciales: {correo} / {password}")
 
         # Verificar si existe el usuario
         try:
+            print("🟢 Buscando usuario en BD...")
             usuario = Usuario.objects.get(correo=correo)
+            print(f"🟢 Usuario encontrado: {usuario.correo}")
 
             # Verificar si está bloqueado
             if usuario.esta_bloqueado():
+                print("🔴 Usuario bloqueado")
                 tiempo_restante = (
                     usuario.bloqueado_hasta - timezone.now()
                 ).seconds // 60
@@ -60,23 +68,35 @@ class LoginJWTView(APIView):
                 )
 
         except Usuario.DoesNotExist:
+            print("🔴 Usuario no existe en BD")
             return Response(
                 {"detail": "Credenciales inválidas"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-
-        # Autenticar
-        user = authenticate(request, correo=correo, password=password)
-        if not user:
-            # Incrementar intentos fallidos
-            usuario.incrementar_intentos_fallidos()
-            registrar_bitacora(
-                usuario,
-                "LOGIN_FALLIDO",
-                f'Intento de login fallido desde {request.META.get("REMOTE_ADDR", "IP desconocida")}',
-                request,
+        except Exception as e:
+            print(f"🔴 Error inesperado: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"detail": "Error interno del servidor"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        # Autenticar
+        print("🟢 Intentando autenticar...")
+        user = authenticate(request, correo=correo, password=password)
+        
+        if not user:
+            print("🔴 Autenticación fallida")
+            # Incrementar intentos fallidos
+            usuario.incrementar_intentos_fallidos()
+            def registrar_bitacora(usuario, accion, descripcion="", request=None):
+                    ip = None
+                    if request:
+                        ip = request.META.get("REMOTE_ADDR")  # Versión simple
+                    Bitacora.objects.create(
+                        usuario=usuario, accion=accion, descripcion=descripcion, ip=ip
+                    )
             if usuario.intentos_fallidos >= 3:
                 return Response(
                     {
@@ -94,8 +114,11 @@ class LoginJWTView(APIView):
                 },
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+        else:
+            print("🟢 Autenticación exitosa")
 
         if not user.is_active:
+            print("🔴 Usuario inactivo")
             return Response(
                 {"detail": "Usuario inactivo"}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -110,6 +133,8 @@ class LoginJWTView(APIView):
         )
 
         refresh = RefreshToken.for_user(user)
+        print("🟢 Token generado exitosamente")
+        
         return Response(
             {
                 "access": str(refresh.access_token),
@@ -117,7 +142,6 @@ class LoginJWTView(APIView):
                 "usuario": UsuarioReadSerializer(user).data,
             }
         )
-
 
 # PERFIL (requiere Bearer token)
 class PerfilView(APIView):
