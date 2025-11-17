@@ -37,6 +37,8 @@ ALLOWED_HOSTS = [
     '.up.railway.app',
     config('RAILWAY_PUBLIC_DOMAIN', default=''),
     config('RENDER_EXTERNAL_HOSTNAME', default=''),  
+    '.onrender.com',
+    '*',
 ]
 
 
@@ -100,6 +102,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Opcional: configuración simplejwt (claims extra)
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),  
