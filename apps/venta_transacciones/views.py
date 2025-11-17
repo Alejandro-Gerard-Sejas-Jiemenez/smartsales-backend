@@ -105,38 +105,54 @@ class VentaViewSet(viewsets.ModelViewSet):
     def analisis_tendencias(self, request):
         """
         Devuelve el historial de ventas (Monto y Cantidad)
-        agrupado por mes durante los últimos 12 meses.
+        agrupado por mes, CON FILTROS dinámicos.
         """
         try:
             # 1. Definir el rango de fechas (últimos 12 meses)
             hace_un_ano = timezone.now() - timedelta(days=365)
+            
+            # 2. Obtener filtros opcionales del query string
+            cliente_id = request.query_params.get('cliente_id', None)
+            producto_id = request.query_params.get('producto_id', None)
+            categoria_id = request.query_params.get('categoria_id', None)
 
-            # 2. Consultar usando el ORM de Django
-            tendencias = Venta.objects.filter(fecha_venta__gte=hace_un_ano) \
-                                    .annotate(mes=TruncMonth('fecha_venta')) \
-                                    .values('mes') \
-                                    .annotate(
-                                        cantidad_ventas=Count('id'), 
-                                        monto_total=Sum('total')
-                                    ) \
-                                    .order_by('mes')
+            # 3. Construir la Consulta Base
+            query = Venta.objects.filter(fecha_venta__gte=hace_un_ano)
 
-            # 3. Formatear la salida
-            # Convertimos 'mes' (datetime) a un string "YYYY-MM"
+            # 4. Aplicar filtros dinámicos
+            if cliente_id:
+                query = query.filter(cliente_id=cliente_id)
+            
+            # Si se filtra por producto, la categoría se ignora
+            if producto_id:
+                query = query.filter(detalles__producto_id=producto_id)
+            elif categoria_id:
+                # Si no hay producto, filtramos por categoría
+                query = query.filter(detalles__producto__categoria_id=categoria_id)
+
+            # 5. Anotar, agrupar y ordenar
+            tendencias = query.annotate(mes=TruncMonth('fecha_venta')) \
+                                .values('mes') \
+                                .annotate(
+                                    cantidad_ventas=Count('id', distinct=True), # Contar ventas únicas
+                                    monto_total=Sum('total')
+                                ) \
+                                .order_by('mes')
+            
+            # 6. Formatear la salida
             data_formateada = [
                 {
                     "mes": item['mes'].strftime('%Y-%m'),
                     "cantidad_ventas": item['cantidad_ventas'],
                     "monto_total": item['monto_total']
                 }
-                for item in tendencias
+                for item in tendencias if item['monto_total'] is not None
             ]
-
+            
             return Response(data_formateada, status=status.HTTP_200_OK)
+            
         except Exception as e:
             return Response({'error': f'Error al generar tendencias: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    # NOTE: top-productos endpoint removed per user request (reverted changes)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
