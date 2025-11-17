@@ -103,6 +103,22 @@ MIDDLEWARE = [
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+CSRF_TRUSTED_ORIGINS = [
+    # Incluye el dominio seguro (HTTPS) de tu Backend en Render
+    f"https://{config('RENDER_EXTERNAL_HOSTNAME')}", 
+    
+    # También puedes incluir el comodín de Render
+    'https://*.onrender.com', 
+    
+    # Y cualquier otro dominio de frontend que pueda enviar formularios POST
+    # Si tu frontend usa Vue/React/Flutter, asegúrate de que el dominio HTTPS final esté aquí.
+    # Por ejemplo, si tu frontend es 'app.netlify.app'
+    # 'https://app.netlify.app',
+]
+
+
+
 # Opcional: configuración simplejwt (claims extra)
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),  
